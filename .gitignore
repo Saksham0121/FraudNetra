@@ -1,0 +1,14 @@
+
+# datasets
+dataset/
+
+# generated datasets
+*.csv
+
+# model artifacts
+*.pkl
+*.h5
+
+# python
+__pycache__/
+venv/
