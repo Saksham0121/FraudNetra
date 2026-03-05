@@ -7,7 +7,7 @@ from config import TRAIN_PATH, MODEL_PATH
 
 print("Preparing dataset...")
 
-X_train, y_train, scaler = prepare_dataset(TRAIN_PATH)
+X_train, y_train = prepare_dataset(TRAIN_PATH)
 
 # train only on normal transactions
 X_normal = X_train[y_train == 0]

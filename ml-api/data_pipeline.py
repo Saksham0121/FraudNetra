@@ -1,14 +1,21 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+import joblib
 
-# columns to remove
+from sklearn.preprocessing import StandardScaler
+from config import SCALER_PATH
+
+
+# columns to remove (high cardinality or useless)
 DROP_COLUMNS = [
     "first",
     "last",
     "street",
     "trans_num",
-    "cc_num"
+    "cc_num",
+    "merchant",
+    "city",
+    "job"
 ]
 
 
@@ -38,36 +45,35 @@ def feature_engineering(df):
         (df["lat"] - df["merch_lat"]) ** 2 +
         (df["long"] - df["merch_long"]) ** 2
     )
+
+    # drop original datetime column
     df = df.drop(columns=["trans_date_trans_time"])
+
     return df
+
 
 def encode_data(df):
     print("Encoding categorical features...")
     df = pd.get_dummies(df)
     return df
 
-from sklearn.preprocessing import StandardScaler
-import joblib
-from config import SCALER_PATH
-
 
 def scale_data(X):
-
     scaler = StandardScaler()
-
     X_scaled = scaler.fit_transform(X)
 
     # save scaler for inference
     joblib.dump(scaler, SCALER_PATH)
-
     return X_scaled
+
 
 def prepare_dataset(path):
     df = load_data(path)
     df = clean_data(df)
     df = feature_engineering(df)
     df = encode_data(df)
+
     X = df.drop("is_fraud", axis=1)
     y = df["is_fraud"]
-    X_scaled, scaler = scale_data(X)
-    return X_scaled, y, scaler
+    X_scaled = scale_data(X)
+    return X_scaled, y
