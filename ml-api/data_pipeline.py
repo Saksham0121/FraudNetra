@@ -46,10 +46,21 @@ def encode_data(df):
     df = pd.get_dummies(df)
     return df
 
+from sklearn.preprocessing import StandardScaler
+import joblib
+from config import SCALER_PATH
+
+
 def scale_data(X):
+
     scaler = StandardScaler()
+
     X_scaled = scaler.fit_transform(X)
-    return X_scaled, scaler
+
+    # save scaler for inference
+    joblib.dump(scaler, SCALER_PATH)
+
+    return X_scaled
 
 def prepare_dataset(path):
     df = load_data(path)

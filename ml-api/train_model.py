@@ -12,6 +12,9 @@ X_train, y_train, scaler = prepare_dataset(TRAIN_PATH)
 # train only on normal transactions
 X_normal = X_train[y_train == 0]
 
+# sample only 200k rows for training
+X_normal = X_normal[np.random.choice(X_normal.shape[0], 200000, replace=False)]
+
 print("Training on normal transactions:", X_normal.shape)
 
 
