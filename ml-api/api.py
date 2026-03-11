@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import numpy as np
+import pandas as pd
 import joblib
 
 from tensorflow.keras.models import load_model
-from config import MODEL_PATH, SCALER_PATH, ANOMALY_THRESHOLD
 
+from config import MODEL_PATH, SCALER_PATH, ANOMALY_THRESHOLD
+from data_pipeline import clean_data, feature_engineering, encode_data
 
 app = FastAPI()
 
@@ -14,7 +16,14 @@ scaler = joblib.load(SCALER_PATH)
 
 
 class Transaction(BaseModel):
-    transaction: list[float]
+    amt: float
+    category: str
+    gender: str
+    city_pop: int
+    lat: float
+    long: float
+    merch_lat: float
+    merch_long: float
 
 
 @app.get("/")
@@ -23,15 +32,17 @@ def home():
 
 
 @app.post("/predict")
-def predict(data: Transaction):
+def predict(transaction: Transaction):
 
-    input_dim = model.input_shape[1]
+    # convert input to dataframe
+    df = pd.DataFrame([transaction.dict()])
 
-    X = np.zeros((1, input_dim))
+    # run preprocessing pipeline
+    df = clean_data(df)
+    df = feature_engineering(df)
+    df = encode_data(df)
 
-    for i, value in enumerate(data.transaction):
-        if i < input_dim:
-            X[0][i] = value
+    X = df.values
 
     X = scaler.transform(X)
 
