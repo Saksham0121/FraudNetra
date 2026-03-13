@@ -11,3 +11,6 @@ SCALER_PATH = "scaler.pkl"
 
 # anomaly detection threshold
 ANOMALY_THRESHOLD = 1.2
+
+THRESHOLD_PATH = "threshold.pkl"
+FEATURE_COLUMNS_PATH = "feature_columns.pkl"

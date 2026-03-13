@@ -1,13 +1,20 @@
 import numpy as np
+import joblib
+
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.optimizers import Adam
+
 from data_pipeline import prepare_dataset
-from config import TRAIN_PATH, MODEL_PATH
+from config import TRAIN_PATH, MODEL_PATH, THRESHOLD_PATH, FEATURE_COLUMNS_PATH
+
 
 print("Preparing dataset...")
 
-X_train, y_train = prepare_dataset(TRAIN_PATH)
+X_train, y_train, feature_columns = prepare_dataset(TRAIN_PATH)
+
+# save feature column structure
+joblib.dump(feature_columns, FEATURE_COLUMNS_PATH)
 
 # train only on normal transactions
 X_normal = X_train[y_train == 0]
@@ -30,6 +37,7 @@ encoded = Dense(16, activation="relu")(encoded)
 decoded = Dense(32, activation="relu")(encoded)
 decoded = Dense(64, activation="relu")(decoded)
 decoded = Dense(input_dim, activation="linear")(decoded)
+
 autoencoder = Model(inputs=input_layer, outputs=decoded)
 
 autoencoder.compile(
@@ -48,6 +56,19 @@ autoencoder.fit(
     shuffle=True
 )
 
+print("Calculating anomaly threshold...")
+
+reconstructed = autoencoder.predict(X_normal)
+
+errors = np.mean((X_normal - reconstructed) ** 2, axis=1)
+
+threshold = np.mean(errors) + 3 * np.std(errors)
+
+print("Threshold:", threshold)
+
+joblib.dump(threshold, THRESHOLD_PATH)
+
 print("Saving model...")
 autoencoder.save(MODEL_PATH)
+
 print("Training complete.")
