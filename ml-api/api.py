@@ -12,6 +12,11 @@ from data_pipeline import clean_data, feature_engineering, encode_data
 
 app = FastAPI()
 
+fraud_stats = {
+    "total_transactions": 0,
+    "fraud_detected": 0
+}
+
 # load model artifacts
 model = load_model(MODEL_PATH, compile=False)
 scaler = joblib.load(SCALER_PATH)
@@ -34,34 +39,50 @@ class Transaction(BaseModel):
 def home():
     return {"message": "Fraud Detection API running"}
 
-
 @app.post("/predict")
 def predict(transaction: Transaction):
 
-    # convert input to dataframe
     df = pd.DataFrame([transaction.dict()])
 
-    # preprocessing pipeline
     df = clean_data(df)
     df = feature_engineering(df)
     df = encode_data(df)
 
-    # align columns with training feature set
     df = df.reindex(columns=feature_columns, fill_value=0)
 
     X = df.values
-
-    # scale features
     X = scaler.transform(X)
 
-    # model inference
     reconstructed = model.predict(X)
 
     error = np.mean((X - reconstructed) ** 2)
 
     fraud = error > threshold
 
+    # update monitoring stats
+    fraud_stats["total_transactions"] += 1
+
+    if fraud:
+        fraud_stats["fraud_detected"] += 1
+
     return {
         "anomaly_score": float(error),
         "is_fraud": bool(fraud)
+    }
+
+@app.get("/fraud-stats")
+def fraud_stats_endpoint():
+
+    total = fraud_stats["total_transactions"]
+    fraud = fraud_stats["fraud_detected"]
+
+    fraud_rate = 0
+
+    if total > 0:
+        fraud_rate = (fraud / total) * 100
+
+    return {
+        "total_transactions": total,
+        "fraud_detected": fraud,
+        "fraud_rate_percent": fraud_rate
     }

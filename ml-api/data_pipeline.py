@@ -26,28 +26,27 @@ def load_data(path):
 
 
 def clean_data(df):
-    df = df.drop(columns=DROP_COLUMNS)
+    df = df.drop(columns=DROP_COLUMNS, errors="ignore")
     return df
 
 
 def feature_engineering(df):
-
-    # convert datetime
-    df["trans_date_trans_time"] = pd.to_datetime(df["trans_date_trans_time"])
-
-    # extract time features
-    df["hour"] = df["trans_date_trans_time"].dt.hour
-    df["day"] = df["trans_date_trans_time"].dt.day
-    df["month"] = df["trans_date_trans_time"].dt.month
+    if "trans_date_trans_time" in df.columns:
+        df["trans_date_trans_time"] = pd.to_datetime(df["trans_date_trans_time"])
+        df["hour"] = df["trans_date_trans_time"].dt.hour
+        df["day"] = df["trans_date_trans_time"].dt.day
+        df["month"] = df["trans_date_trans_time"].dt.month
+        df = df.drop(columns=["trans_date_trans_time"])
+    else:
+        df["hour"] = 0
+        df["day"] = 0
+        df["month"] = 0
 
     # distance feature
     df["distance"] = np.sqrt(
         (df["lat"] - df["merch_lat"]) ** 2 +
         (df["long"] - df["merch_long"]) ** 2
     )
-
-    # drop original datetime column
-    df = df.drop(columns=["trans_date_trans_time"])
 
     return df
 
@@ -75,5 +74,6 @@ def prepare_dataset(path):
 
     X = df.drop("is_fraud", axis=1)
     y = df["is_fraud"]
+    feature_columns = X.columns.tolist()
     X_scaled = scale_data(X)
-    return X_scaled, y
+    return X_scaled, y, feature_columns
