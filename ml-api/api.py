@@ -3,10 +3,20 @@ from pydantic import BaseModel
 import numpy as np
 import pandas as pd
 import joblib
+from datetime import datetime, timezone
+from pymongo import MongoClient
 
 from tensorflow.keras.models import load_model
 
-from config import MODEL_PATH, SCALER_PATH, THRESHOLD_PATH, FEATURE_COLUMNS_PATH
+from config import (
+    MODEL_PATH,
+    SCALER_PATH,
+    THRESHOLD_PATH,
+    FEATURE_COLUMNS_PATH,
+    MONGO_URI,
+    MONGO_DB_NAME,
+    MONGO_COLLECTION_NAME,
+)
 from data_pipeline import clean_data, feature_engineering, encode_data
 
 
@@ -17,11 +27,26 @@ fraud_stats = {
     "fraud_detected": 0
 }
 
+transaction_logs = []
+
 # load model artifacts
 model = load_model(MODEL_PATH, compile=False)
 scaler = joblib.load(SCALER_PATH)
 threshold = joblib.load(THRESHOLD_PATH)
 feature_columns = joblib.load(FEATURE_COLUMNS_PATH)
+
+mongo_client = None
+mongo_collection = None
+
+try:
+    mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
+    mongo_client.admin.command("ping")
+    mongo_collection = mongo_client[MONGO_DB_NAME][MONGO_COLLECTION_NAME]
+    print(f"Connected to MongoDB: {MONGO_DB_NAME}.{MONGO_COLLECTION_NAME}")
+except Exception as exc:
+    print(f"MongoDB connection unavailable, using in-memory logs only: {exc}")
+    mongo_client = None
+    mongo_collection = None
 
 
 class Transaction(BaseModel):
@@ -37,12 +62,22 @@ class Transaction(BaseModel):
 
 @app.get("/")
 def home():
-    return {"message": "Fraud Detection API running"}
+    return {
+        "message": "Fraud Detection API running",
+        "mongodb_connected": mongo_collection is not None
+    }
+
+
+def log_transaction(record):
+    transaction_logs.append(record)
+
+    if mongo_collection is not None:
+        mongo_collection.insert_one(record)
 
 @app.post("/predict")
 def predict(transaction: Transaction):
-
-    df = pd.DataFrame([transaction.dict()])
+    transaction_data = transaction.dict()
+    df = pd.DataFrame([transaction_data])
 
     df = clean_data(df)
     df = feature_engineering(df)
@@ -64,6 +99,15 @@ def predict(transaction: Transaction):
 
     if fraud:
         fraud_stats["fraud_detected"] += 1
+
+    log_transaction(
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "transaction": transaction_data,
+            "anomaly_score": float(error),
+            "is_fraud": bool(fraud)
+        }
+    )
 
     return {
         "anomaly_score": float(error),
