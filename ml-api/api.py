@@ -74,6 +74,20 @@ def log_transaction(record):
     if mongo_collection is not None:
         mongo_collection.insert_one(record)
 
+
+def get_recent_frauds(limit):
+    if mongo_collection is not None:
+        recent_frauds = list(
+            mongo_collection.find(
+                {"is_fraud": True},
+                {"_id": 0}
+            ).sort("timestamp", -1).limit(limit)
+        )
+        return recent_frauds
+
+    recent_frauds = [record for record in transaction_logs if record["is_fraud"]]
+    return recent_frauds[-limit:][::-1]
+
 @app.post("/predict")
 def predict(transaction: Transaction):
     transaction_data = transaction.dict()
@@ -129,4 +143,13 @@ def fraud_stats_endpoint():
         "total_transactions": total,
         "fraud_detected": fraud,
         "fraud_rate_percent": fraud_rate
+    }
+
+
+@app.get("/recent-frauds")
+def recent_frauds_endpoint(limit: int = 10):
+    recent_frauds = get_recent_frauds(limit)
+    return {
+        "count": len(recent_frauds),
+        "recent_frauds": recent_frauds
     }
