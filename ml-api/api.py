@@ -88,6 +88,57 @@ def get_recent_frauds(limit):
     recent_frauds = [record for record in transaction_logs if record["is_fraud"]]
     return recent_frauds[-limit:][::-1]
 
+
+def get_all_transaction_logs():
+    if mongo_collection is not None:
+        return list(mongo_collection.find({}, {"_id": 0}))
+
+    return transaction_logs
+
+
+def build_fraud_analytics():
+    logs = get_all_transaction_logs()
+    total_transactions = len(logs)
+
+    if total_transactions == 0:
+        return {
+            "total_transactions": 0,
+            "fraud_detected": 0,
+            "non_fraud_transactions": 0,
+            "fraud_rate_percent": 0,
+            "average_anomaly_score": 0,
+            "max_anomaly_score": 0,
+            "fraud_by_category": []
+        }
+
+    fraud_logs = [record for record in logs if record["is_fraud"]]
+    fraud_detected = len(fraud_logs)
+    anomaly_scores = [record["anomaly_score"] for record in logs]
+
+    category_counts = {}
+    for record in fraud_logs:
+        category = record["transaction"].get("category", "unknown")
+        category_counts[category] = category_counts.get(category, 0) + 1
+
+    fraud_by_category = [
+        {"category": category, "count": count}
+        for category, count in sorted(
+            category_counts.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+    ]
+
+    return {
+        "total_transactions": total_transactions,
+        "fraud_detected": fraud_detected,
+        "non_fraud_transactions": total_transactions - fraud_detected,
+        "fraud_rate_percent": (fraud_detected / total_transactions) * 100,
+        "average_anomaly_score": float(np.mean(anomaly_scores)),
+        "max_anomaly_score": float(np.max(anomaly_scores)),
+        "fraud_by_category": fraud_by_category
+    }
+
 @app.post("/predict")
 def predict(transaction: Transaction):
     transaction_data = transaction.dict()
@@ -153,3 +204,8 @@ def recent_frauds_endpoint(limit: int = 10):
         "count": len(recent_frauds),
         "recent_frauds": recent_frauds
     }
+
+
+@app.get("/fraud-analytics")
+def fraud_analytics_endpoint():
+    return build_fraud_analytics()
