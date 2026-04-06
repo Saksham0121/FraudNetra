@@ -8,6 +8,7 @@ from config import SCALER_PATH
 
 # columns to remove (high cardinality or useless)
 DROP_COLUMNS = [
+    "Unnamed: 0",
     "first",
     "last",
     "street",
@@ -15,7 +16,11 @@ DROP_COLUMNS = [
     "cc_num",
     "merchant",
     "city",
-    "job"
+    "state",
+    "zip",
+    "job",
+    "dob",
+    "unix_time"
 ]
 
 
@@ -57,15 +62,6 @@ def encode_data(df):
     return df
 
 
-def scale_data(X):
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    # save scaler for inference
-    joblib.dump(scaler, SCALER_PATH)
-    return X_scaled
-
-
 def prepare_dataset(path):
     df = load_data(path)
     df = clean_data(df)
@@ -75,5 +71,5 @@ def prepare_dataset(path):
     X = df.drop("is_fraud", axis=1)
     y = df["is_fraud"]
     feature_columns = X.columns.tolist()
-    X_scaled = scale_data(X)
-    return X_scaled, y, feature_columns
+    return X, y, feature_columns
+

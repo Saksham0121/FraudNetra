@@ -3,9 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 
 dotenv.config();
-
 const app = express();
-
 const PORT = process.env.PORT || 5000;
 const ML_API_BASE_URL = process.env.ML_API_BASE_URL || "http://127.0.0.1:8000";
 

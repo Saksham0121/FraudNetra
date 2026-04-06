@@ -56,7 +56,8 @@
 }
 
 .metrics-grid,
-.insight-grid {
+.insight-grid,
+.heatmap-grid {
   display: grid;
   gap: 20px;
 }
@@ -67,6 +68,10 @@
 
 .insight-grid {
   grid-template-columns: 1.2fr 0.8fr;
+}
+
+.heatmap-grid {
+  grid-template-columns: 1.25fr 0.75fr;
 }
 
 .metric-card,
@@ -102,6 +107,85 @@
 .metric-detail,
 .feed-meta {
   color: var(--muted);
+}
+
+.heatmap-copy {
+  color: var(--muted);
+  max-width: 62ch;
+}
+
+.heatmap-surface {
+  position: relative;
+  min-height: 320px;
+  margin-top: 22px;
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(238, 104, 58, 0.35), transparent 18%),
+    radial-gradient(circle at 72% 42%, rgba(255, 179, 71, 0.3), transparent 20%),
+    radial-gradient(circle at 50% 60%, rgba(229, 77, 46, 0.28), transparent 22%),
+    linear-gradient(160deg, #112f3c 0%, #184e57 45%, #0d2a35 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.heatmap-gridlines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 14% 20%;
+  opacity: 0.55;
+}
+
+.heat-point {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.08);
+}
+
+.heat-point-customer {
+  background: #ffe082;
+  box-shadow:
+    0 0 0 12px rgba(255, 224, 130, 0.12),
+    0 0 24px rgba(255, 224, 130, 0.48);
+}
+
+.heat-point-merchant {
+  background: #ff7043;
+  box-shadow:
+    0 0 0 12px rgba(255, 112, 67, 0.12),
+    0 0 24px rgba(255, 112, 67, 0.45);
+}
+
+.heat-link {
+  position: absolute;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.zone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.zone-item {
+  padding: 16px;
+  border: 1px solid rgba(12, 29, 38, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.zone-item strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-h);
 }
 
 .workflow {
@@ -162,17 +246,23 @@
 
   .hero-panel,
   .metrics-grid,
-  .insight-grid {
+  .insight-grid,
+  .heatmap-grid {
     grid-template-columns: 1fr;
     flex-direction: column;
   }
 
   .metrics-grid,
-  .insight-grid {
+  .insight-grid,
+  .heatmap-grid {
     display: grid;
   }
 
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .heatmap-surface {
+    min-height: 260px;
   }
 }

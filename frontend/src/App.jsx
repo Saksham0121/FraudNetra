@@ -33,6 +33,10 @@ function formatTimestamp(value) {
   })
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max)
+}
+
 function App() {
   const [analytics, setAnalytics] = useState(initialAnalytics)
   const [recentFrauds, setRecentFrauds] = useState([])
@@ -111,6 +115,35 @@ function App() {
     }
   ]
 
+  const heatmapPoints = recentFrauds
+    .map((item, index) => {
+      const { lat, long, merch_lat: merchLat, merch_long: merchLong } = item.transaction
+
+      if (
+        [lat, long, merchLat, merchLong].some(
+          (coordinate) => typeof coordinate !== 'number' || Number.isNaN(coordinate)
+        )
+      ) {
+        return null
+      }
+
+      const customerX = clamp(((long + 180) / 360) * 100, 4, 96)
+      const customerY = clamp(((90 - lat) / 180) * 100, 6, 94)
+      const merchantX = clamp(((merchLong + 180) / 360) * 100, 4, 96)
+      const merchantY = clamp(((90 - merchLat) / 180) * 100, 6, 94)
+
+      return {
+        id: `${item.timestamp}-${index}`,
+        category: item.transaction.category,
+        score: item.anomaly_score,
+        customerX,
+        customerY,
+        merchantX,
+        merchantY
+      }
+    })
+    .filter(Boolean)
+
   return (
     <main className="dashboard-shell">
       <section className="hero-panel">
@@ -182,6 +215,88 @@ function App() {
                     {formatScore(item.anomaly_score)}
                   </strong>
                   <p className="feed-meta">{formatTimestamp(item.timestamp)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+      </section>
+
+      <section className="heatmap-grid">
+        <article className="panel panel-large">
+          <div className="panel-heading">
+            <p className="panel-label">Fraud Heatmap</p>
+            <h3>Geographic anomaly view</h3>
+          </div>
+          <p className="heatmap-copy">
+            Customer and merchant coordinates from recent fraud events are
+            projected into a monitoring heat surface so suspicious movement
+            patterns are easy to spot.
+          </p>
+
+          {heatmapPoints.length === 0 ? (
+            <p className="empty-state">
+              Fraud coordinates will appear here once recent suspicious
+              transactions are available.
+            </p>
+          ) : (
+            <div className="heatmap-surface" aria-label="Fraud heatmap">
+              <div className="heatmap-gridlines" aria-hidden="true" />
+              {heatmapPoints.map((point) => (
+                <div key={`${point.id}-customer`} className="heatmap-cluster">
+                  <span
+                    className="heat-point heat-point-customer"
+                    style={{
+                      left: `${point.customerX}%`,
+                      top: `${point.customerY}%`
+                    }}
+                    title={`${point.category} customer location`}
+                  />
+                  <span
+                    className="heat-point heat-point-merchant"
+                    style={{
+                      left: `${point.merchantX}%`,
+                      top: `${point.merchantY}%`
+                    }}
+                    title={`${point.category} merchant location`}
+                  />
+                  <span
+                    className="heat-link"
+                    style={{
+                      left: `${Math.min(point.customerX, point.merchantX)}%`,
+                      top: `${Math.min(point.customerY, point.merchantY)}%`,
+                      width: `${Math.abs(point.customerX - point.merchantX)}%`,
+                      height: `${Math.abs(point.customerY - point.merchantY)}%`
+                    }}
+                    aria-hidden="true"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="panel">
+          <div className="panel-heading">
+            <p className="panel-label">Hot Zones</p>
+            <h3>Latest coordinate pairs</h3>
+          </div>
+          {heatmapPoints.length === 0 ? (
+            <p className="empty-state">
+              No location pairs to summarize yet.
+            </p>
+          ) : (
+            <div className="zone-list">
+              {heatmapPoints.map((point) => (
+                <div className="zone-item" key={`${point.id}-summary`}>
+                  <p className="feed-title">{point.category}</p>
+                  <strong>Score {formatScore(point.score)}</strong>
+                  <p className="feed-meta">
+                    Customer ({point.customerY.toFixed(1)}%, {point.customerX.toFixed(1)}%)
+                  </p>
+                  <p className="feed-meta">
+                    Merchant ({point.merchantY.toFixed(1)}%, {point.merchantX.toFixed(1)}%)
+                  </p>
                 </div>
               ))}
             </div>

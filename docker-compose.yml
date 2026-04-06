@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: fraudnetra-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  ml-api:
+    build:
+      context: ./ml-api
+    container_name: fraudnetra-ml
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/
+      - MONGODB_DB_NAME=fraudnetra
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: fraudnetra-backend
+    ports:
+      - "5001:5000"
+    environment:
+      - PORT=5000
+      - ML_API_BASE_URL=http://ml-api:8000
+    depends_on:
+      - ml-api
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      # Override the base URL to point to backend using localhost because it is requested by the client's browser
+      args:
+        - VITE_API_BASE_URL=http://localhost:5001
+    container_name: fraudnetra-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
