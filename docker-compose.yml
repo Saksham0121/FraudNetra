@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  mongodb:
+  mongo:
     image: mongo:8.0
     container_name: fraudnetra-mongo
     ports:
@@ -17,10 +15,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - MONGODB_URI=mongodb://mongodb:27017/
-      - MONGODB_DB_NAME=fraudnetra
+      - MONGO_URI=mongodb://mongo:27017/
+      - MONGO_DB_NAME=fraudnetra
+      - MONGO_COLLECTION_NAME=transaction_logs
     depends_on:
-      - mongodb
+      - mongo
     restart: unless-stopped
 
   backend:
@@ -39,12 +38,11 @@ services:
   frontend:
     build:
       context: ./frontend
-      # Override the base URL to point to backend using localhost because it is requested by the client's browser
       args:
         - VITE_API_BASE_URL=http://localhost:5001
     container_name: fraudnetra-frontend
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - backend
     restart: unless-stopped
